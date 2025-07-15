@@ -7,12 +7,13 @@ import multer from 'multer';
 import path, { join } from 'path'; // make sure you're importing 'join'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config();
 const app = express();
 const PORT = 5000;
-app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
@@ -55,6 +56,14 @@ const Appointment = mongoose.model('Appointment', appointmentSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Blog = mongoose.model('Blog', blogSchema);
 const OpenHour = mongoose.model('OpenHour', openHourSchema);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'dr-senait', // folder in Cloudinary
+    allowed_formats: ['jpg', 'png', 'jpeg']
+  }
+});
+const upload = multer({ storage });
 
 // Middleware
 app.use(cors());
@@ -62,15 +71,11 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads')); // Serve uploaded images
 
 // Multer Config for Image Uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
-const upload = multer({ storage });
 
 // Routes
 
@@ -114,14 +119,21 @@ app.get('/api/messages', async (req, res) => {
   res.json(messages);
 });
 
-// Blogs
-app.post('/api/blogs', async (req, res) => {
-  const { title, date, image, content } = req.body;
-  if (!title || !date || !image || !content) {
-    return res.status(400).json({ message: 'All fields are required.' });
+app.post('/api/blogs', upload.single('image'), async (req, res) => {
+  const { title, date, content } = req.body;
+
+  if (!title || !date || !req.file || !content) {
+    return res.status(400).json({ message: 'All fields including image are required.' });
   }
+
   try {
-    const newBlog = new Blog({ title, date, image, content });
+    const newBlog = new Blog({
+      title,
+      date,
+      image: req.file.path, // Cloudinary URL
+      content
+    });
+
     await newBlog.save();
     res.status(201).json({ message: 'Blog created successfully', blog: newBlog });
   } catch (err) {
@@ -129,7 +141,7 @@ app.post('/api/blogs', async (req, res) => {
   }
 });
 
-// ✅ Correct blog route
+// Get Blog by ID
 app.get('/api/blogs/:id', async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -142,18 +154,18 @@ app.get('/api/blogs/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+
+// Get All Blogs
 app.get('/api/blogs', async (req, res) => {
   try {
-    const blogs = await Blog.find({}, 'title date image content').sort({ createdAt: -1 }); // get selected fields
+    const blogs = await Blog.find({}, 'title date image content').sort({ createdAt: -1 });
     res.json(blogs);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
-
-
-
+// Update Blog (no image re-upload for simplicity)
 app.put('/api/blogs/:id', async (req, res) => {
   try {
     const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -163,6 +175,7 @@ app.put('/api/blogs/:id', async (req, res) => {
   }
 });
 
+// Delete Blog
 app.delete('/api/blogs/:id', async (req, res) => {
   try {
     await Blog.findByIdAndDelete(req.params.id);
@@ -171,7 +184,6 @@ app.delete('/api/blogs/:id', async (req, res) => {
     res.status(500).json({ message: 'Error deleting blog', error: err.message });
   }
 });
-
 // Open Hours
 app.get('/api/open-hours', async (req, res) => {
   const hours = await OpenHour.find();
@@ -208,12 +220,12 @@ app.put('/api/open-hours/:id', async (req, res) => {
 
 // Image Upload Endpoint
 app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'No file uploaded' });
+  if (!req.file || !req.file.path) {
+    return res.status(400).json({ message: 'Upload failed' });
   }
-  const imageUrl = `http://localhost:${PORT}/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+  res.json({ url: req.file.path }); // Cloudinary URL
 });
+
 
 // Export to Excel
 app.get('/api/export/:type', async (req, res) => {
