@@ -9,11 +9,10 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-app.use('/uploads', express.static(join(__dirname, 'uploads')));
-
 dotenv.config();
 const app = express();
 const PORT = 5000;
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
