@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import path from 'path';
+import path, { join } from 'path'; // make sure you're importing 'join'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
