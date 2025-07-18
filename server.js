@@ -119,27 +119,23 @@ app.get('/api/messages', async (req, res) => {
   res.json(messages);
 });
 
-app.post('/api/blogs', upload.single('image'), async (req, res) => {
-  const { title, date, content } = req.body;
+app.post('/api/blogs', async (req, res) => {
+  const { title, date, image, content } = req.body;
+  console.log('Received blog post data:', { title, date, image, content });
 
-  if (!title || !date || !req.file || !content) {
+  if (!title || !date || !image || !content) {
     return res.status(400).json({ message: 'All fields including image are required.' });
   }
 
   try {
-    const newBlog = new Blog({
-      title,
-      date,
-      image: req.file.path, // Cloudinary URL
-      content
-    });
-
+    const newBlog = new Blog({ title, date, image, content });
     await newBlog.save();
     res.status(201).json({ message: 'Blog created successfully', blog: newBlog });
   } catch (err) {
     res.status(500).json({ message: 'Error creating blog', error: err.message });
   }
 });
+
 
 // Get Blog by ID
 app.get('/api/blogs/:id', async (req, res) => {
