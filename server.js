@@ -104,9 +104,10 @@ app.post('/api/appointments', async (req, res) => {
 
     res.status(200).json({ message: 'Appointment saved successfully!' });
   } catch (err) {
-    console.error('❌ Error saving appointment:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
+  console.error('❌ Error saving appointment:', err); // This is key
+  res.status(500).json({ message: 'Server error', error: err.message });
+}
+
 });
 
 
