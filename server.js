@@ -24,6 +24,7 @@ mongoose.connect(process.env.MONGO_URI)
 const appointmentSchema = new mongoose.Schema({
   name: String,
   phone: String,
+  email: String, 
   date: String,
   service: String,
   createdAt: { type: Date, default: Date.now }
@@ -80,15 +81,22 @@ cloudinary.config({
 // Routes
 
 // Appointments
-app.post('/api/appointments', (req, res) => {
-  const { name, phone, date, service, email, message } = req.body;
+app.post('/api/appointments', async (req, res) => {
+  const { name, phone, email, date, service } = req.body;
 
-  if (!name || !phone || !date || !service || !email) {
+  if (!name || !phone || !email || !date || !service) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
-  // Do something with the data (e.g., save to DB)
-  res.status(200).json({ message: 'Appointment saved' });
+  try {
+    const newAppointment = new Appointment({ name, phone, email, date, service });
+    await newAppointment.save();
+
+    res.status(200).json({ message: 'Appointment saved successfully!' });
+  } catch (error) {
+    console.error('❌ Error saving appointment:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 
