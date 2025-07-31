@@ -80,19 +80,17 @@ cloudinary.config({
 // Routes
 
 // Appointments
-app.post('/api/appointments', async (req, res) => {
-  const { name, phone, date, service } = req.body;
-  if (!name || !phone || !date || !service) {
-    return res.status(400).json({ message: 'All fields are required.' });
+app.post('/api/appointments', (req, res) => {
+  const { name, phone, date, service, email, message } = req.body;
+
+  if (!name || !phone || !date || !service || !email) {
+    return res.status(400).json({ message: 'Missing required fields' });
   }
-  try {
-    const appointment = new Appointment({ name, phone, date, service });
-    await appointment.save();
-    res.status(201).json({ message: 'Appointment saved successfully', appointment });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
+
+  // Do something with the data (e.g., save to DB)
+  res.status(200).json({ message: 'Appointment saved' });
 });
+
 
 app.get('/api/appointments', async (req, res) => {
   const appointments = await Appointment.find().sort({ createdAt: -1 });
